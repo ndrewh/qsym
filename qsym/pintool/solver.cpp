@@ -183,7 +183,7 @@ void Solver::addJcc(ExprRef e, bool taken, ADDRINT pc) {
     is_interesting = isInterestingJcc(e, taken, pc);
 
   if (is_interesting)
-    negatePath(e, taken);
+    negatePath(e, taken, pc);
   addConstraint(e, taken, is_interesting);
 }
 
@@ -515,23 +515,31 @@ bool Solver::isInterestingJcc(ExprRef rel_expr, bool taken, ADDRINT pc) {
   return interesting;
 }
 
-void Solver::negatePath(ExprRef e, bool taken) {
+void Solver::negatePath(ExprRef e, bool taken, ADDRINT pc) {
+  LOG_STAT("Negating branch at " + hexstr(pc) + "taken => " + decstr(!taken) + "\n");
+
+  char buf[0x100];
+  snprintf(buf, 0x100, "branchflip_%lx_%d", pc, !taken);
+
   reset();
   syncConstraints(e);
   addToSolver(e, !taken);
-  bool sat = checkAndSave();
+  bool sat = checkAndSave(std::string(buf));
   if (!sat) {
     reset();
     // optimistic solving
     addToSolver(e, !taken);
-    checkAndSave("optimistic");
+    snprintf(buf, 0x100, "optimistic_branchflip_%lx_%d", pc, !taken);
+    checkAndSave(std::string(buf));
+  } else {
+    LOG_STAT("[BRANCHFLIP] Successfully negated branch at " + hexstr(pc) + "taken => " + decstr(!taken) + "\n");
   }
 }
 
 void Solver::solveOne(z3::expr z3_expr) {
   push();
   add(z3_expr);
-  checkAndSave();
+  checkAndSave("solveOne");
   pop();
 }
 
