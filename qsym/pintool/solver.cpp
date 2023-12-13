@@ -8,7 +8,7 @@ namespace {
 
 const uint64_t kUsToS = 1000000;
 const int kSessionIdLength = 32;
-const unsigned kSolverTimeout = 10000; // 10 seconds
+const unsigned kSolverTimeout = 60000; // 60 seconds
 
 std::string toString6digit(INT32 val) {
   char buf[6 + 1]; // ndigit + 1
