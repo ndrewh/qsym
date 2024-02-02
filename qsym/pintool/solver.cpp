@@ -147,6 +147,8 @@ z3::check_result Solver::check() {
 }
 
 bool Solver::checkAndSave(const std::string& postfix) {
+  return false;
+
   if (check() == z3::sat) {
     saveValues(postfix);
     return true;
@@ -196,20 +198,20 @@ void Solver::addAddr(ExprRef e, llvm::APInt addr) {
   if (e->isConcrete())
     return;
 
-  if (last_interested_) {
-    reset();
-    // TODO: add optimize in z3
-    syncConstraints(e);
-    if (check() != z3::sat)
-      return;
-    z3::expr &z3_expr = e->toZ3Expr();
+  // if (last_interested_) {
+  //   reset();
+  //   // TODO: add optimize in z3
+  //   syncConstraints(e);
+  //   if (check() != z3::sat)
+  //     return;
+  //   z3::expr &z3_expr = e->toZ3Expr();
 
-    // TODO: add unbound case
-    z3::expr min_expr = getMinValue(z3_expr);
-    z3::expr max_expr = getMaxValue(z3_expr);
-    solveOne(z3_expr == min_expr);
-    solveOne(z3_expr == max_expr);
-  }
+  //   // TODO: add unbound case
+  //   z3::expr min_expr = getMinValue(z3_expr);
+  //   z3::expr max_expr = getMaxValue(z3_expr);
+  //   solveOne(z3_expr == min_expr);
+  //   solveOne(z3_expr == max_expr);
+  // }
 
   addValue(e, addr);
 }
@@ -234,30 +236,30 @@ void Solver::addValue(ExprRef e, llvm::APInt val) {
 }
 
 void Solver::solveAll(ExprRef e, llvm::APInt val) {
-  if (last_interested_) {
-    std::string postfix = "";
-    ExprRef expr_val = g_expr_builder->createConstant(val, e->bits());
-    ExprRef expr_concrete = g_expr_builder->createBinaryExpr(Equal, e, expr_val);
+  // if (last_interested_) {
+  //   std::string postfix = "";
+  //   ExprRef expr_val = g_expr_builder->createConstant(val, e->bits());
+  //   ExprRef expr_concrete = g_expr_builder->createBinaryExpr(Equal, e, expr_val);
 
-    reset();
-    syncConstraints(e);
-    addToSolver(expr_concrete, false);
+  //   reset();
+  //   syncConstraints(e);
+  //   addToSolver(expr_concrete, false);
 
-    if (check() != z3::sat) {
-      // Optimistic solving
-      reset();
-      addToSolver(expr_concrete, false);
-      postfix = "optimistic";
-    }
+  //   if (check() != z3::sat) {
+  //     // Optimistic solving
+  //     reset();
+  //     addToSolver(expr_concrete, false);
+  //     postfix = "optimistic";
+  //   }
 
-    z3::expr z3_expr = e->toZ3Expr();
-    while(true) {
-      if (!checkAndSave(postfix))
-        break;
-      z3::expr value = getPossibleValue(z3_expr);
-      add(value != z3_expr);
-    }
-  }
+  //   z3::expr z3_expr = e->toZ3Expr();
+  //   while(true) {
+  //     if (!checkAndSave(postfix))
+  //       break;
+  //     z3::expr value = getPossibleValue(z3_expr);
+  //     add(value != z3_expr);
+  //   }
+  // }
   addValue(e, val);
 }
 
