@@ -47,6 +47,7 @@ public:
   UINT8 getInput(ADDRINT index);
 
   ADDRINT last_pc() { return last_pc_; }
+  std::string smt_string();
 
 protected:
   std::string           input_file_;

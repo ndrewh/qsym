@@ -552,4 +552,8 @@ void Solver::checkFeasible() {
 #endif
 }
 
+std::string Solver::smt_string() {
+  return solver_.to_smt2();
+}
+
 } // namespace qsym
