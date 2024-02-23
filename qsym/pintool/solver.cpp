@@ -518,6 +518,7 @@ bool Solver::isInterestingJcc(ExprRef rel_expr, bool taken, ADDRINT pc) {
 }
 
 void Solver::negatePath(ExprRef e, bool taken, ADDRINT pc) {
+  return;
   LOG_STAT("Negating branch at " + hexstr(pc) + "taken => " + decstr(!taken) + "\n");
 
   char buf[0x100];
