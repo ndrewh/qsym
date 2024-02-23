@@ -83,6 +83,22 @@ namespace qsym {
         tree->addNode(node);
       }
 
+      std::vector<std::shared_ptr<T>> all() const {
+        std::vector<std::shared_ptr<T>> res;
+        std::set<std::shared_ptr<T>> seen;
+        for (auto &t : forest_) {
+          if (t == NULL) continue;
+          auto& nodes = t->getNodes();
+          for (auto &n : nodes) {
+            if (seen.find(n) == seen.end()) {
+              seen.insert(n);
+              res.push_back(n);
+            }
+          }
+        }
+        return res;
+      }
+
     private:
       std::vector<std::shared_ptr<DependencyTree<T>>> forest_;
   };

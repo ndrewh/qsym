@@ -78,6 +78,7 @@ protected:
 
   void addToSolver(ExprRef e, bool taken);
   void syncConstraints(ExprRef e);
+  void assertConstraints(std::vector<std::shared_ptr<Expr>> nodes);
 
   void addConstraint(ExprRef e, bool taken, bool is_interesting);
   void addConstraint(ExprRef e);

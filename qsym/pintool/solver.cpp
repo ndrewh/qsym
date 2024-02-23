@@ -391,6 +391,28 @@ void Solver::addToSolver(ExprRef e, bool taken) {
   add(e->toZ3Expr());
 }
 
+void Solver::assertConstraints(std::vector<std::shared_ptr<Expr>> nodes) {
+  for (std::shared_ptr<Expr> node : nodes) {
+    if (isRelational(node.get()))
+      addToSolver(node, true);
+    else {
+      // Process range-based constraints
+      bool valid = false;
+      for (INT32 i = 0; i < 2; i++) {
+        ExprRef expr_range = getRangeConstraint(node, i);
+        if (expr_range != NULL) {
+          addToSolver(expr_range, true);
+          valid = true;
+        }
+      }
+
+      // One of range expressions should be non-NULL
+      if (!valid)
+        LOG_INFO(std::string(__func__) + ": Incorrect constraints are inserted\n");
+    }
+  }
+}
+
 void Solver::syncConstraints(ExprRef e) {
   std::set<std::shared_ptr<DependencyTree<Expr>>> forest;
   DependencySet* deps = e->getDependencies();
@@ -400,25 +422,7 @@ void Solver::syncConstraints(ExprRef e) {
 
   for (std::shared_ptr<DependencyTree<Expr>> tree : forest) {
     std::vector<std::shared_ptr<Expr>> nodes = tree->getNodes();
-    for (std::shared_ptr<Expr> node : nodes) {
-      if (isRelational(node.get()))
-        addToSolver(node, true);
-      else {
-        // Process range-based constraints
-        bool valid = false;
-        for (INT32 i = 0; i < 2; i++) {
-          ExprRef expr_range = getRangeConstraint(node, i);
-          if (expr_range != NULL) {
-            addToSolver(expr_range, true);
-            valid = true;
-          }
-        }
-
-        // One of range expressions should be non-NULL
-        if (!valid)
-          LOG_INFO(std::string(__func__) + ": Incorrect constraints are inserted\n");
-      }
-    }
+    assertConstraints(nodes);
   }
 
   checkFeasible();
@@ -553,6 +557,8 @@ void Solver::checkFeasible() {
 }
 
 std::string Solver::smt_string() {
+  reset();
+  assertConstraints(dep_forest_.all());
   return solver_.to_smt2();
 }
 
