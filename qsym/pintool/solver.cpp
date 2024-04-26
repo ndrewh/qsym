@@ -121,7 +121,8 @@ void Solver::pop() {
 
 void Solver::add(z3::expr expr) {
   if (!expr.is_const())
-    solver_.add(expr.simplify());
+    solver_.add(expr);
+    // solver_.add(expr.simplify());
 }
 
 z3::check_result Solver::check() {
@@ -385,7 +386,7 @@ z3::expr Solver::getMaxValue(z3::expr& z3_expr) {
 }
 
 void Solver::addToSolver(ExprRef e, bool taken) {
-  e->simplify();
+  // e->simplify();
   if (!taken)
     e = g_expr_builder->createLNot(e);
   add(e->toZ3Expr());
