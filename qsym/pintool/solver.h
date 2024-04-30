@@ -3,6 +3,8 @@
 
 #include <z3++.h>
 #include <fstream>
+#include <map>
+#include <utility>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -24,6 +26,7 @@ class Solver {
 public:
   ExprRefSetTy updated_exprs_;
   ExprRefSetTy added_exprs_;
+  bool enabled = true;
 
   Solver(
       const std::string input_file,
@@ -38,7 +41,7 @@ public:
   z3::check_result check();
 
   bool checkAndSave(const std::string& postfix="");
-  void addJcc(ExprRef, bool, ADDRINT);
+  void addJcc(ExprRef, bool, ADDRINT, bool real_branch = false);
   void addAddr(ExprRef, ADDRINT);
   void addAddr(ExprRef, llvm::APInt);
   void addValue(ExprRef, ADDRINT);
@@ -65,6 +68,9 @@ protected:
   ADDRINT               last_pc_;
   DependencyForest<Expr> dep_forest_;
 
+  std::map<std::pair<uint64_t, bool>, int> eval_branch_counters_;
+  std::map<std::pair<uint64_t, bool>, int> branch_hitcount_;
+
   void checkOutDir();
   void readInput();
 
@@ -77,6 +83,7 @@ protected:
   z3::expr getMaxValue(z3::expr& z3_expr);
 
   void addToSolver(ExprRef e, bool taken);
+  void forceAddToSolver(ExprRef e, bool taken);
   void syncConstraints(ExprRef e);
   void assertConstraints(std::vector<std::shared_ptr<Expr>> nodes);
 

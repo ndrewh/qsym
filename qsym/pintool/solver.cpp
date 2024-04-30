@@ -160,11 +160,94 @@ bool Solver::checkAndSave(const std::string& postfix) {
   }
 }
 
-void Solver::addJcc(ExprRef e, bool taken, ADDRINT pc) {
+static uint64_t* parse_formula_name(const char *s) {
+  if (!s) return NULL;
+
+  uint64_t *arr = (uint64_t*)malloc(3 * sizeof(uint64_t));
+  memset(arr, 0, 3 * sizeof(uint64_t));
+
+  char *s2 = strdup(s);
+  char* pch = strtok (s2,"-");
+  int idx = 0;
+  while (pch != NULL && idx < 4)
+  {
+    if (idx > 0) {
+      uint64_t val = strtoull(pch, NULL, 16);
+      arr[idx-1] = val;
+    }
+    pch = strtok (NULL, "-");
+    idx++;
+  }
+
+  free(s2);
+  return arr;
+}
+
+void Solver::addJcc(ExprRef e, bool taken, ADDRINT pc, bool real_branch) {
+  if (!this->enabled) {
+    return;
+  }
+
   // Save the last instruction pointer for debugging
   last_pc_ = pc;
 
-  if (e->isConcrete())
+  static uint64_t counter = 0;
+
+  if (real_branch)
+    branch_hitcount_[{pc, taken}] += 1;
+    counter += 1;
+
+  static uint64_t *target_branch_info = parse_formula_name(getenv("EVAL_BRANCH_VERIFY"));
+  static int randomflip_freq = getenv("RANDOM_BRANCHFLIP_FREQ") ? atoi(getenv("RANDOM_BRANCHFLIP_FREQ")) : 100; // default: 1% of branches
+
+  static bool flip_optimistic = (getenv("EVAL_BRANCHFLIP_OPTIMISTIC") && getenv("EVAL_BRANCHFLIP_OPTIMISTIC")[0] == '1');
+
+  // Verify branchflip
+  if (target_branch_info) {
+    uint64_t target_pc = target_branch_info[0];
+    bool orig_taken = target_branch_info[1] != 0;
+    uint64_t orig_hitcount = target_branch_info[2];
+
+    if (pc == target_pc && orig_taken != taken && branch_hitcount_[{target_pc, orig_taken}] == orig_hitcount - 1) {
+        // successful flip
+        printf("flip_success\n");
+        exit(1); // lets get out of here
+    }
+  }
+  // For the purposes of eval -- dump a random 1% of branchflips -- even if they are concrete
+  else if (real_branch && (rand() % randomflip_freq) == 0) {
+    if (eval_branch_counters_.find({pc, taken}) == eval_branch_counters_.end()) {
+      eval_branch_counters_[{pc, taken}] = 1;
+
+      reset();
+
+      if (!flip_optimistic)
+        assertConstraints(dep_forest_.all());
+
+      auto noflip_dump = solver_.to_smt2();
+      if (e)
+        forceAddToSolver(e, !taken);
+      else
+        forceAddToSolver(std::make_shared<BoolExpr>(false), true); // force unsat if concrete branch -- unflippable
+
+      auto flip_dump = solver_.to_smt2();
+
+      char fnamebuf[0x400];
+      snprintf(fnamebuf, 0x400, "flip-%lx-%x-%x.smt", pc, taken, branch_hitcount_[{pc, taken}]);
+
+      std::ofstream smt_out(out_dir_ + "/" + std::string(fnamebuf));
+      smt_out << flip_dump << std::endl;
+      smt_out.close();
+
+      snprintf(fnamebuf, 0x400, "preflip-%lx-%x-%lu.smt", pc, taken, counter);
+
+      std::ofstream smt_out2(out_dir_ + "/" + std::string(fnamebuf));
+      smt_out2 << noflip_dump << std::endl;
+      smt_out2.close();
+    }
+  }
+
+  if (!e || e->isConcrete())
     return;
 
   // if e == Bool(true), then ignore
@@ -390,6 +473,12 @@ void Solver::addToSolver(ExprRef e, bool taken) {
   if (!taken)
     e = g_expr_builder->createLNot(e);
   add(e->toZ3Expr());
+}
+
+void Solver::forceAddToSolver(ExprRef e, bool taken) {
+  if (!taken)
+    e = g_expr_builder->createLNot(e);
+  solver_.add(e->toZ3Expr());
 }
 
 void Solver::assertConstraints(std::vector<std::shared_ptr<Expr>> nodes) {
