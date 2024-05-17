@@ -28,7 +28,8 @@ public:
   Solver(
       const std::string input_file,
       const std::string out_dir,
-      const std::string bitmap);
+      const std::string bitmap,
+      unsigned solver_timeout);
   virtual ~Solver() = default;
 
   void push();

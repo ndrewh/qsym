@@ -8,7 +8,6 @@ namespace {
 
 const uint64_t kUsToS = 1000000;
 const int kSessionIdLength = 32;
-const unsigned kSolverTimeout = 10000 * 2; // 10 seconds * ncores
 
 std::string toString6digit(INT32 val) {
   char buf[6 + 1]; // ndigit + 1
@@ -83,7 +82,8 @@ inline bool isEqual(ExprRef e, bool taken) {
 Solver::Solver(
     const std::string input_file,
     const std::string out_dir,
-    const std::string bitmap)
+    const std::string bitmap,
+    unsigned solver_timeout)
   : input_file_(input_file)
   , inputs_()
   , out_dir_(out_dir)
@@ -100,7 +100,7 @@ Solver::Solver(
 {
   // Set timeout for solver
   z3::params p(context_);
-  p.set(":timeout", kSolverTimeout);
+  p.set(":timeout", solver_timeout);
   solver_.set(p);
 
   checkOutDir();
